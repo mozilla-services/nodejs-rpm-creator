@@ -16,6 +16,23 @@ SPEC_REPO='https://github.com/kazuhisya/nodejs-rpm.git'
 # 4. it will create an SRPM for mock
 # 5. done
 
+function logmsg { echo "$(date '+%Y %m %d %H:%M:%S') $@"; }
+function logerr { echo "$@" >&2; }
+
+function sanityCheck
+{
+    if [ -z $(command -v mock) ]; then
+        logerr "ERROR: mock command not found"
+        exit 1
+    fi
+
+    groups | grep -qi mock
+    if [ $? != 0 ]; then
+        logerr "ERROR: Not part of the mock group"
+        exit 1
+    fi
+}
+
 function ensureRepoExists
 {
     if [ ! -e $SPEC_REPO_DIR ]; then
@@ -36,40 +53,74 @@ function checkoutTag
     cd $SPEC_REPO_DIR
 
     # make sure the repo is clean...
-    git clean -fdx .
+    git clean -fdx . > /dev/null
 
     GIT_HASH=$(git rev-parse --verify --quiet --short $TAG);
 
     if [ -z $GIT_HASH ]; then
-        echo >&2 "Version $TAG not found"
+        logerr "Version: $TAG not found"
+        logerr "Available Version:"
+        git tag | sort --version-sort --reverse | sed 's/^/    /' >&2
         exit 1
     else
-        git checkout $TAG
+        git checkout $TAG &> /dev/null
     fi
 }
 
 function buildSRPM
 {
-    VERSION=$1
+    VERSION="$1"
+    PACKAGE_NAME="nodejs-$(echo $VERSION | sed 's/v//')-1.el6.src.rpm"
+    FILENAME="/var/lib/mock/epel-6-x86_64/result/$PACKAGE_NAME"
+
+    if [ ! -e $BASE/srpms ]; then
+        mkdir $BASE/srpms
+    fi
+
+    if [ -e $BASE/srpms/$PACKAGE_NAME ]; then
+        logerr "ERROR: srpms/$PACKAGE_NAME already exists"
+        exit 1
+    fi
 
     checkoutTag $VERSION
 
-    if [ -e $BUILD_DIR ]; 
+    if [ -e $BUILD_DIR ]; then
         rm -rf $BUILD_DIR
     fi
 
     mkdir -p $BUILD_DIR/SOURCES $BUILD_DIR/SPECS
-
     cp $SPEC_REPO_DIR/nodejs.spec $BUILD_DIR/SPECS
     cp $SPEC_REPO_DIR/*.patch $BUILD_DIR/SOURCES
 
-    SRC_ARCHIVE="http://nodejs.org/dist/v${VERSION}/node-v${VERSION}.tar.gz"
-    curl "$SRC_ARCHIVE" -o "$BUILD_DIR/SOURCES/node-v${VERSION}.tar.gz"
+    SRC_ARCHIVE="http://nodejs.org/dist/${VERSION}/node-${VERSION}.tar.gz"
+    logmsg "Fetching $SRC_ARCHIVE"
 
-    mock --buildsrpm --spec $BUILD_DIR/SPECS/nodejs.spec --sources $BUILD_DIR/SOURCES
+    curl --silent --fail "$SRC_ARCHIVE" -o "$BUILD_DIR/SOURCES/node-${VERSION}.tar.gz"
+
+    if [ $? -gt 0 ]; then
+        logerr "ERROR: Failed to fetch $SRC_ARCHIVE"
+        exit 1
+    fi
+
+    logmsg "Building SRPM"
+    mock --quiet --buildsrpm --spec $BUILD_DIR/SPECS/nodejs.spec --sources $BUILD_DIR/SOURCES
+
+    if [ $? -gt 0 ]; then
+        logerr "Mock build error"
+        exit 1
+    fi
+
+    if [ ! -e $FILENAME ]; then
+        logerr "ERROR, expected $FILENAME"
+        exit 1
+    fi
+
+    mv $FILENAME $BASE/srpms
+    logmsg "DONE: srpms/$FILENAME"
 }
 
 NODE_VERSION=$1
 
+sanityCheck
 ensureRepoExists
 buildSRPM $NODE_VERSION
