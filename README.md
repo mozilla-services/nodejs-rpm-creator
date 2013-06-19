@@ -6,6 +6,6 @@ This outputs `.spec` that can be used to build SRPM files which can later be pas
 Usage
 -----
 
-`./create-srpm $NODE_VERSION > $NODE_VERSION.spec`
+`./create-srpm $NODE_VERSION
 
 
