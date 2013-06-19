@@ -1,0 +1,75 @@
+#!/bin/sh
+# vim: ft=sh
+
+cd $(dirname $0)
+BASE=$(pwd)
+SPEC_REPO_DIR=$BASE/spec-repo
+BUILD_DIR=$BASE/srpmbuild
+SPEC_REPO='https://github.com/kazuhisya/nodejs-rpm.git'
+
+# how this script works: 
+#
+# 1. it will pull down and update the latest specs from $SPEC_REPO
+# 2. it will attempt to checkout the provided version, which is a 
+#    tag in $SPEC_REPO
+# 3. it will copy the spec file to the build directory
+# 4. it will create an SRPM for mock
+# 5. done
+
+function ensureRepoExists
+{
+    if [ ! -e $SPEC_REPO_DIR ]; then
+        mkdir $SPEC_REPO_DIR
+        git clone $SPEC_REPO $SPEC_REPO_DIR
+    fi
+
+    # dir is there, but the files are not ... basic check
+    if [ ! -e $SPEC_REPO_DIR/.git ]; then
+        rm -rf $SPEC_REPO_DIR
+        ensureRepoExists
+    fi
+}
+
+function checkoutTag
+{
+    TAG=$1
+    cd $SPEC_REPO_DIR
+
+    # make sure the repo is clean...
+    git clean -fdx .
+
+    GIT_HASH=$(git rev-parse --verify --quiet --short $TAG);
+
+    if [ -z $GIT_HASH ]; then
+        echo >&2 "Version $TAG not found"
+        exit 1
+    else
+        git checkout $TAG
+    fi
+}
+
+function buildSRPM
+{
+    VERSION=$1
+
+    checkoutTag $VERSION
+
+    if [ -e $BUILD_DIR ]; 
+        rm -rf $BUILD_DIR
+    fi
+
+    mkdir -p $BUILD_DIR/SOURCES $BUILD_DIR/SPECS
+
+    cp $SPEC_REPO_DIR/nodejs.spec $BUILD_DIR/SPECS
+    cp $SPEC_REPO_DIR/*.patch $BUILD_DIR/SOURCES
+
+    SRC_ARCHIVE="http://nodejs.org/dist/v${VERSION}/node-v${VERSION}.tar.gz"
+    curl "$SRC_ARCHIVE" -o "$BUILD_DIR/SOURCES/node-v${VERSION}.tar.gz"
+
+    mock --buildsrpm --spec $BUILD_DIR/SPECS/nodejs.spec --sources $BUILD_DIR/SOURCES
+}
+
+NODE_VERSION=$1
+
+ensureRepoExists
+buildSRPM $NODE_VERSION
