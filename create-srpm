@@ -5,7 +5,7 @@ cd $(dirname $0)
 BASE=$(pwd)
 SPEC_REPO_DIR=$BASE/spec-repo
 BUILD_DIR=$BASE/srpmbuild
-SPEC_REPO='https://github.com/kazuhisya/nodejs-rpm.git'
+SPEC_REPO='https://github.com/mozilla-services/nodejs-rpm.git'
 
 # how this script works: 
 #
