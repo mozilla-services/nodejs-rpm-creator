@@ -3,8 +3,8 @@
 
 cd $(dirname $0)
 BASE=$(pwd)
-SPEC_REPO_DIR=$BASE/spec-repo
-BUILD_DIR=$BASE/srpmbuild
+SPEC_REPO_DIR=$BASE/nodejs-rpm
+BUILD_DIR=$BASE/BUILD
 SPEC_REPO='https://github.com/mozilla-services/nodejs-rpm.git'
 
 # how this script works: 
@@ -53,7 +53,8 @@ function checkoutTag
     cd $SPEC_REPO_DIR
 
     # make sure the repo is clean...
-    git clean -fdx . > /dev/null
+    git clean -fdx . &> /dev/null
+    git fetch --tags
 
     GIT_HASH=$(git rev-parse --verify --quiet --short $TAG);
 
@@ -116,7 +117,7 @@ function buildSRPM
     fi
 
     mv $FILENAME $BASE/srpms
-    logmsg "DONE: srpms/$FILENAME"
+    logmsg "DONE: ./srpms/$PACKAGE_NAME"
 }
 
 NODE_VERSION=$1
