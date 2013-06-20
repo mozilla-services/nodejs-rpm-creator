@@ -104,7 +104,7 @@ function buildSRPM
     fi
 
     logmsg "Building SRPM"
-    mock --quiet --buildsrpm --spec $BUILD_DIR/SPECS/nodejs.spec --sources $BUILD_DIR/SOURCES
+    mock --quiet --buildsrpm --root epel-6-x86_64 --spec $BUILD_DIR/SPECS/nodejs.spec --sources $BUILD_DIR/SOURCES
 
     if [ $? -gt 0 ]; then
         logerr "Mock build error"
