@@ -72,52 +72,56 @@ function buildSRPM
 {
     VERSION="$1"
     PACKAGE_NAME="nodejs-$(echo $VERSION | sed 's/v//')-1.el6.src.rpm"
-    FILENAME="/var/lib/mock/epel-6-x86_64/result/$PACKAGE_NAME"
+    FILENAME="$BUILD_DIR/SRPMS/$PACKAGE_NAME"
 
-    if [ ! -e $BASE/srpms ]; then
-        mkdir $BASE/srpms
+    if [ ! -e $BUILD_DIR/SRPMS/$PACKAGE_NAME ]; then
+
+        checkoutTag $VERSION
+
+        for d in SOURCES SPECS RPMS SRPMS
+        do
+            if [ ! -e $BUILD_DIR/$d ]; then
+                mkdir -p $BUILD_DIR/$d
+            fi
+        done
+
+        cp $SPEC_REPO_DIR/nodejs.spec $BUILD_DIR/SPECS
+        cp $SPEC_REPO_DIR/*.patch $BUILD_DIR/SOURCES
+
+        SRC_ARCHIVE="http://nodejs.org/dist/${VERSION}/node-${VERSION}.tar.gz"
+        logmsg "Fetching $SRC_ARCHIVE"
+
+        curl --silent --fail "$SRC_ARCHIVE" -o "$BUILD_DIR/SOURCES/node-${VERSION}.tar.gz"
+
+        if [ $? -gt 0 ]; then
+            logerr "ERROR: Failed to fetch $SRC_ARCHIVE"
+            exit 1
+        fi
+
+        logmsg "Building SRPM"
+        mock --quiet \
+            --buildsrpm \
+            --root epel-6-x86_64 \
+            --spec $BUILD_DIR/SPECS/nodejs.spec \
+            --sources $BUILD_DIR/SOURCES \
+            --resultdir $BUILD_DIR/SRPMS
+
+        if [ $? -gt 0 ]; then
+            logerr "Mock build error"
+            exit 1
+        fi
+    else
+        logmsg "$PACKAGE_NAME already exists... skipping SRPM build"
     fi
+}
 
-    if [ -e $BASE/srpms/$PACKAGE_NAME ]; then
-        logerr "ERROR: srpms/$PACKAGE_NAME already exists"
-        exit 1
-    fi
-
-    checkoutTag $VERSION
-
-    if [ -e $BUILD_DIR ]; then
-        rm -rf $BUILD_DIR
-    fi
-
-    mkdir -p $BUILD_DIR/SOURCES $BUILD_DIR/SPECS
-    cp $SPEC_REPO_DIR/nodejs.spec $BUILD_DIR/SPECS
-    cp $SPEC_REPO_DIR/*.patch $BUILD_DIR/SOURCES
-
-    SRC_ARCHIVE="http://nodejs.org/dist/${VERSION}/node-${VERSION}.tar.gz"
-    logmsg "Fetching $SRC_ARCHIVE"
-
-    curl --silent --fail "$SRC_ARCHIVE" -o "$BUILD_DIR/SOURCES/node-${VERSION}.tar.gz"
-
-    if [ $? -gt 0 ]; then
-        logerr "ERROR: Failed to fetch $SRC_ARCHIVE"
-        exit 1
-    fi
-
-    logmsg "Building SRPM"
-    mock --quiet --buildsrpm --root epel-6-x86_64 --spec $BUILD_DIR/SPECS/nodejs.spec --sources $BUILD_DIR/SOURCES
-
-    if [ $? -gt 0 ]; then
-        logerr "Mock build error"
-        exit 1
-    fi
-
-    if [ ! -e $FILENAME ]; then
-        logerr "ERROR, expected $FILENAME"
-        exit 1
-    fi
-
-    mv $FILENAME $BASE/srpms
-    logmsg "DONE: ./srpms/$PACKAGE_NAME"
+function buildRPM
+{
+    logmsg "Building Node.js RPM"
+    mock --quiet \
+        --root epel-6-x86_64 \
+        --resultdir $BUILD_DIR/RPMS \
+        $BUILD_DIR/SRPMS/$PACKAGE_NAME
 }
 
 NODE_VERSION=$1
@@ -125,3 +129,4 @@ NODE_VERSION=$1
 sanityCheck
 ensureRepoExists
 buildSRPM $NODE_VERSION
+buildRPM
