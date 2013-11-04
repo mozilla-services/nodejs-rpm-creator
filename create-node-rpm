@@ -3,24 +3,27 @@
 
 cd $(dirname $0)
 BASE=$(pwd)
-SPEC_REPO_DIR=$BASE/nodejs-rpm
 BUILD_DIR=$BASE/BUILD
-SPEC_REPO='https://github.com/mozilla-services/nodejs-rpm.git'
 
 # how this script works: 
 #
-# 1. it will pull down and update the latest specs from $SPEC_REPO
-# 2. it will attempt to checkout the provided version, which is a 
-#    tag in $SPEC_REPO
-# 3. it will copy the spec file to the build directory
-# 4. it will create an SRPM for mock
-# 5. done
+# 1. it will copy the spec file to the build directory
+# 2. it will create an SRPM for mock
+# 3. it will build the RPM using mock
+# 4. done
 
 function logmsg { echo "$(date '+%Y %m %d %H:%M:%S') $@"; }
 function logerr { echo "$@" >&2; }
 
 function sanityCheck
 {
+
+    SPEC_FILE="node-v$1.spec"
+    if [ ! -e $BASE/specs/$SPEC_FILE ]; then
+        logerr "ERROR: spec file specs/$SPEC_FILE does not exist"
+        exit 1
+    fi
+
     if [ -z $(command -v mock) ]; then
         logerr "ERROR: mock command not found"
         exit 1
@@ -33,50 +36,13 @@ function sanityCheck
     fi
 }
 
-function ensureRepoExists
-{
-    if [ ! -e $SPEC_REPO_DIR ]; then
-        mkdir $SPEC_REPO_DIR
-        git clone $SPEC_REPO $SPEC_REPO_DIR
-    fi
-
-    # dir is there, but the files are not ... basic check
-    if [ ! -e $SPEC_REPO_DIR/.git ]; then
-        rm -rf $SPEC_REPO_DIR
-        ensureRepoExists
-    fi
-}
-
-function checkoutTag
-{
-    TAG=$1
-    cd $SPEC_REPO_DIR
-
-    # make sure the repo is clean...
-    git clean -fdx . &> /dev/null
-    git fetch --tags
-
-    GIT_HASH=$(git rev-parse --verify --quiet --short $TAG);
-
-    if [ -z $GIT_HASH ]; then
-        logerr "Version: $TAG not found"
-        logerr "Available Version:"
-        git tag | sort --version-sort --reverse | sed 's/^/    /' >&2
-        exit 1
-    else
-        git checkout $TAG &> /dev/null
-    fi
-}
-
 function buildSRPM
 {
     VERSION="$1"
-    PACKAGE_NAME="nodejs-$(echo $VERSION | sed 's/v//')-1.el6.src.rpm"
-    FILENAME="$BUILD_DIR/SRPMS/$PACKAGE_NAME"
+    PACKAGE_NAME="nodejs-v$VERSION-1.el6.src.rpm"
+    SPEC_FILE="$BASE/specs/node-v$VERSION.spec"
 
     if [ ! -e $BUILD_DIR/SRPMS/$PACKAGE_NAME ]; then
-
-        checkoutTag $VERSION
 
         for d in SOURCES SPECS RPMS SRPMS
         do
@@ -85,13 +51,27 @@ function buildSRPM
             fi
         done
 
-        cp $SPEC_REPO_DIR/nodejs.spec $BUILD_DIR/SPECS
-        cp $SPEC_REPO_DIR/*.patch $BUILD_DIR/SOURCES
+        cp $SPEC_FILE $BUILD_DIR/SPECS
+        cp $BASE/specs/*.patch $BUILD_DIR/SOURCES
 
-        SRC_ARCHIVE="http://nodejs.org/dist/${VERSION}/node-${VERSION}.tar.gz"
+        SRC_ARCHIVE="http://nodejs.org/dist/v${VERSION}/node-v${VERSION}.tar.gz"
         logmsg "Fetching $SRC_ARCHIVE"
+        OUTFILE="$BUILD_DIR/SOURCES/node-v${VERSION}.tar.gz"
+        if [ ! -e $OUTFILE ]; then
+            curl --silent --fail "$SRC_ARCHIVE" -o $OUTFILE
+        fi
 
-        curl --silent --fail "$SRC_ARCHIVE" -o "$BUILD_DIR/SOURCES/node-${VERSION}.tar.gz"
+        CHECK=$(curl --silent --fail http://nodejs.org/dist/v$VERSION/SHASUMS.txt | awk "/node-v$VERSION.tar.gz/ {print \$1}")
+        echo $CHECK
+
+        OUTSHA=$(sha1sum $OUTFILE | awk '{print $1}')
+
+        if [ $CHECK != $OUTSHA ]; then
+            logerr "SHA1 SUM does not match, CHECK=$CHECK, DOWNLOAD=$OUTSHA"
+            exit 1
+        else
+            logmsg "Download OK. SHA1 sums match: $CHECK"
+        fi
 
         if [ $? -gt 0 ]; then
             logerr "ERROR: Failed to fetch $SRC_ARCHIVE"
@@ -99,10 +79,11 @@ function buildSRPM
         fi
 
         logmsg "Building SRPM"
+
         mock --quiet \
             --buildsrpm \
             --root epel-6-x86_64 \
-            --spec $BUILD_DIR/SPECS/nodejs.spec \
+            --spec $BUILD_DIR/SPECS/node-v$VERSION.spec \
             --sources $BUILD_DIR/SOURCES \
             --resultdir $BUILD_DIR/SRPMS
 
@@ -124,9 +105,14 @@ function buildRPM
         $BUILD_DIR/SRPMS/$PACKAGE_NAME
 }
 
-NODE_VERSION=$1
+if [ $# -ne 1 ]; then
+    logerr "Usage: $0 <version>"
+    logerr "  example, $0 0.10.21"
+    exit 1
+fi
 
-sanityCheck
-ensureRepoExists
-buildSRPM $NODE_VERSION
+VERSION=$1
+
+sanityCheck $VERSION
+buildSRPM $VERSION
 buildRPM
