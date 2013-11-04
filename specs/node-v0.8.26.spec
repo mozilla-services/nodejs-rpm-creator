@@ -2,7 +2,7 @@
 %define   _dist_ver %(sh /usr/lib/rpm/redhat/dist.sh)
 
 Name:          %{_base}js
-Version:       0.10.21
+Version:       0.8.26
 Release:       1%{?dist}
 Summary:       Node.js is a server-side JavaScript environment that uses an asynchronous event-driven model.
 Packager:      Benson Wong <bwong@mozilla.com>
@@ -25,8 +25,8 @@ BuildRequires: zlib-devel
 %if "%{_dist_ver}" == ".el5"
 # require EPEL
 BuildRequires: python26
-%endif
 Patch0: node-js.centos5.configure.patch
+%endif
 
 %description
 Node.js is a server-side JavaScript environment that uses an asynchronous event-driven model.
@@ -93,11 +93,15 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root,-)
+%{_includedir}/node/*.h
+%{_includedir}/node/uv-private/*.h
+%{_prefix}/lib/node/wafadmin
 %{_prefix}/lib/node_modules/npm
 %{_prefix}/share/doc/%{_base}-v%{version}
 %{_prefix}/lib/dtrace/node.d
 %defattr(755,root,root)
 %{_bindir}/node
+%{_bindir}/node-waf
 %{_bindir}/npm
 
 %doc

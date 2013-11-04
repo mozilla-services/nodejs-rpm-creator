@@ -39,7 +39,7 @@ function sanityCheck
 function buildSRPM
 {
     VERSION="$1"
-    PACKAGE_NAME="nodejs-v$VERSION-1.el6.src.rpm"
+    PACKAGE_NAME="nodejs-$VERSION-1.el6.src.rpm"
     SPEC_FILE="$BASE/specs/node-v$VERSION.spec"
 
     if [ ! -e $BUILD_DIR/SRPMS/$PACKAGE_NAME ]; then
@@ -62,7 +62,6 @@ function buildSRPM
         fi
 
         CHECK=$(curl --silent --fail http://nodejs.org/dist/v$VERSION/SHASUMS.txt | awk "/node-v$VERSION.tar.gz/ {print \$1}")
-        echo $CHECK
 
         OUTSHA=$(sha1sum $OUTFILE | awk '{print $1}')
 
