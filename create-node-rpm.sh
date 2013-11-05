@@ -21,6 +21,11 @@ function sanityCheck
     SPEC_FILE="node-v$1.spec"
     if [ ! -e $BASE/specs/$SPEC_FILE ]; then
         logerr "ERROR: spec file specs/$SPEC_FILE does not exist"
+        logerr "Available Versions: "
+        for V in $(ls -1 specs/node*.spec | sed -r 's/^.*-v(.*).spec$/\1/');
+        do
+            logerr "  - $V"
+        done
         exit 1
     fi
 
