@@ -71,7 +71,7 @@ function buildSRPM
         OUTSHA=$(sha1sum $OUTFILE | awk '{print $1}')
 
         if [ $CHECK != $OUTSHA ]; then
-            logerr "SHA1 SUM does not match, CHECK=$CHECK, DOWNLOAD=$OUTSHA"
+            logerr "SHA1 on $OUTFILE did not match, EXPECTED=$CHECK, GOT=$OUTSHA"
             exit 1
         else
             logmsg "Download OK. SHA1 sums match: $CHECK"
