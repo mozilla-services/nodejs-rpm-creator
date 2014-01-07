@@ -1,7 +1,7 @@
 %define   _base node
 %define   _dist_ver %(sh /usr/lib/rpm/redhat/dist.sh)
 
-Name:          %{_base}js
+Name:          %{_base}js-svcops
 Version:       0.8.26
 Release:       1%{?dist}
 Summary:       Node.js is a server-side JavaScript environment that uses an asynchronous event-driven model.

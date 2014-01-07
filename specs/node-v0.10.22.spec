@@ -2,7 +2,7 @@
 %define   _dist_ver %(sh /usr/lib/rpm/redhat/dist.sh)
 
 Name:          %{_base}js-svcops
-Version:       0.10.21
+Version:       0.10.22
 Release:       1%{?dist}
 Summary:       Node.js is a server-side JavaScript environment that uses an asynchronous event-driven model.
 Packager:      Benson Wong <bwong@mozilla.com>
@@ -109,5 +109,5 @@ rm -rf $RPM_BUILD_ROOT
 
 
 %changelog
-* Mon Nov 04 2013 Benson Wong <bwong@mozilla.com
+* Mon Jan 06 2014 Benson Wong <bwong@mozilla.com>
 - initial import

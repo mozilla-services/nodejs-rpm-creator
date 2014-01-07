@@ -44,7 +44,7 @@ function sanityCheck
 function buildSRPM
 {
     VERSION="$1"
-    PACKAGE_NAME="nodejs-$VERSION-1.el6.src.rpm"
+    PACKAGE_NAME="nodejs-svcops-$VERSION-1.el6.src.rpm"
     SPEC_FILE="$BASE/specs/node-v$VERSION.spec"
 
     if [ ! -e $BUILD_DIR/SRPMS/$PACKAGE_NAME ]; then
