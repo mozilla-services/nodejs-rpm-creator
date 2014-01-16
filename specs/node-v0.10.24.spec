@@ -5,7 +5,7 @@ Name:          %{_base}js-svcops
 Version:       0.10.24
 Release:       1%{?dist}
 Summary:       Node.js is a server-side JavaScript environment that uses an asynchronous event-driven model.
-Packager:      Kazuhisa Hara <kazuhisya@gmail.com>
+Packager:      Chris Kolosiwsky <ckolos@mozilla.com>
 Group:         Development/Libraries
 License:       MIT License
 URL:           http://nodejs.org
@@ -117,6 +117,10 @@ rm -rf $RPM_SOURCE_DIR/%{_base}-v%{version}-linux-%{_node_arch}
 /usr/share/man/man7
 
 %changelog
+* Thu Jan 16 2014 Chris Kolosiwsky <ckolos@mozilla.com>
+- changed name to reflect svcops naming policy (added -svcops)
+- changed packager to reduce confusion
+
 * Wed Jan 15 2014 Chris Kolosiwsky <ckolos@mozilla.com>
 - removed everything that split package into multiple rpms
 - adapted from https://github.com/kazuhisya/nodejs-rpm/blob/master/nodejs.spec
