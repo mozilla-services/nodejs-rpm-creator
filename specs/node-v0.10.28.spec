@@ -103,7 +103,6 @@ rm -rf $RPM_SOURCE_DIR/%{_base}-v%{version}-linux-%{_node_arch}
 %defattr(-,root,root,-)
 %{_prefix}/lib/node_modules/npm
 %{_prefix}/share/doc/%{_base}-v%{version}
-%{_prefix}/lib/dtrace/node.d
 %{_includedir}/node
 %{_prefix}/share/%{_base}js/%{_base}-v%{version}-linux-%{_node_arch}.tar.gz
 %defattr(755,root,root)
