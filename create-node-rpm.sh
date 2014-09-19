@@ -5,6 +5,12 @@ cd $(dirname $0)
 BASE=$(pwd)
 BUILD_DIR=$BASE/BUILD
 
+DIST_VERSION=$(/usr/lib/rpm/redhat/dist.sh --el)
+
+if [ $# -eq 2 ]; then
+    DIST_VERSION=$2
+fi
+
 # how this script works: 
 #
 # 1. it will copy the spec file to the build directory
@@ -44,7 +50,7 @@ function sanityCheck
 function buildSRPM
 {
     VERSION="$1"
-    PACKAGE_NAME="nodejs-svcops-$VERSION-1.el6.src.rpm"
+    PACKAGE_NAME="nodejs-svcops-$VERSION-1.el${DIST_VERSION}.src.rpm"
     SPEC_FILE="$BASE/specs/node-v$VERSION.spec"
 
     if [ ! -e $BUILD_DIR/SRPMS/$PACKAGE_NAME ]; then
@@ -86,7 +92,7 @@ function buildSRPM
 
         mock --quiet \
             --buildsrpm \
-            --root epel-6-x86_64 \
+            --root epel-${DIST_VERSION}-x86_64 \
             --spec $BUILD_DIR/SPECS/node-v$VERSION.spec \
             --sources $BUILD_DIR/SOURCES \
             --resultdir $BUILD_DIR/SRPMS
@@ -104,19 +110,22 @@ function buildRPM
 {
     logmsg "Building Node.js RPM"
     mock --quiet \
-        --root epel-6-x86_64 \
+        --root epel-${DIST_VERSION}-x86_64 \
         --resultdir $BUILD_DIR/RPMS \
         $BUILD_DIR/SRPMS/$PACKAGE_NAME
 }
 
-if [ $# -ne 1 ]; then
-    logerr "Usage: $0 <version>"
-    logerr "  example, $0 0.10.21"
+if [ $# -lt 1 ]; then
+    logerr "Usage: $0 <version> <rhel version - defaults to system>"
+    logerr "  example, $0 0.10.21    - default to release version of system"
+    logerr "  example, $0 0.10.32 6  - for EPEL6"
+    logerr "  example, $0 0.10.32 7  - for EPEL7"
     exit 1
 fi
 
 VERSION=$1
 
+logmsg "Building for RHEL $DIST_VERSION"
 sanityCheck $VERSION
 buildSRPM $VERSION
 buildRPM
